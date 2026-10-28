@@ -77,7 +77,7 @@ export default function Home() {
               </div>
 
               <div className="my-7 flex items-center justify-center">
-                <div className="flex h-52 w-52 items-center justify-center rounded-full bg-[#EDF6E9] sm:h-64 sm:w-64">
+                <div className="flex h-52 w-52 items-center justify-center rounded-full bg-[#ebf3e8] sm:h-64 sm:w-64">
                   <span className="text-8xl sm:text-9xl">🧺</span>
                 </div>
               </div>
@@ -159,7 +159,7 @@ export default function Home() {
 
           <Link
             href="#সব-পণ্য"
-            className="mt-6 inline-block rounded-xl bg-white px-6 py-3 font-bold text-emerald-800 transition hover:bg-emerald-50"
+            className="mt-6 inline-block rounded-xl bg-emerald-600 px-6 py-3 font-bold text-emerald-800 transition hover:bg-emerald-500"
           >
             পণ্যের তালিকা দেখুন
           </Link>
