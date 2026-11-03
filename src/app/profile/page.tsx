@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth-client";
+import ProductArtwork from "@/components/ui/ProductArtwork";
+import { useAuthSession, useSignOutMutation } from "@/lib/auth/queries";
 
 const profileFeatures = [
   {
     title: "পণ্যের দাম",
     description: "বাজারের বিভিন্ন পণ্যের দাম দেখুন।",
-    href: "/#সব-পণ্য",
+    href: "/products",
     icon: "🛒",
   },
   {
@@ -23,38 +24,58 @@ const profileFeatures = [
 export default function ProfilePage() {
   const router = useRouter();
 
-  const { data: session, isPending } = authClient.useSession();
+  const {
+    data: session,
+    isPending,
+    isError,
+  } = useAuthSession();
+  const signOut = useSignOutMutation();
+  const [signOutError, setSignOutError] = useState("");
 
   const user = session?.user;
 
   useEffect(() => {
-    if (!isPending && !session) {
+    if (!isPending && !isError && !session) {
       router.replace("/sign-in");
     }
-  }, [isPending, session, router]);
+  }, [isPending, isError, session, router]);
 
   const handleSignOut = async () => {
+    setSignOutError("");
+
     try {
-      const { error } = await authClient.signOut();
-
-      if (error) {
-        console.error("Sign Out Error:", error);
-        return;
-      }
-
+      await signOut.mutateAsync();
       router.replace("/");
       router.refresh();
-    } catch (error) {
-      console.error("Sign Out Error:", error);
+    } catch {
+      setSignOutError("সাইন আউট করা যায়নি। আবার চেষ্টা করুন।");
     }
   };
 
-  if (isPending || !session) {
+  if (isPending) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#F8FAF5]">
         <p className="font-semibold text-green-800">
           প্রোফাইল লোড হচ্ছে...
         </p>
+      </main>
+    );
+  }
+
+  if (isError) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#F8FAF5] px-4">
+        <p role="alert" className="font-semibold text-red-700">
+          প্রোফাইল লোড করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।
+        </p>
+      </main>
+    );
+  }
+
+  if (!session) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#F8FAF5]">
+        <p className="font-semibold text-green-800">সাইন ইন পেজে নেওয়া হচ্ছে...</p>
       </main>
     );
   }
@@ -73,15 +94,12 @@ export default function ProfilePage() {
           <div className="bg-green-800 px-6 py-10 text-white sm:px-10">
             <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
               <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/15 text-4xl">
-                {user?.image ? (
-                  <img
-                    src={user.image}
-                    alt={user.name || "Profile"}
-                    className="h-full w-full rounded-full object-cover"
-                  />
-                ) : (
-                  "👤"
-                )}
+                <ProductArtwork
+                  image={user?.image ?? undefined}
+                  alt={user?.name || "Profile"}
+                  fallback="👤"
+                  className="h-full w-full rounded-full object-cover"
+                />
               </div>
 
               <div>
@@ -125,8 +143,6 @@ export default function ProfilePage() {
                   {user?.email || "ইমেইল পাওয়া যায়নি"}
                 </p>
               </div>
-
-              
 
               <div className="rounded-2xl border border-gray-100 bg-[#F8FAF5] p-5">
                 <p className="text-sm text-gray-500">
@@ -182,10 +198,16 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="inline-flex rounded-xl bg-red-600 px-5 py-3 font-semibold text-white transition hover:bg-red-700"
+                disabled={signOut.isPending}
+                className="inline-flex rounded-xl bg-red-600 px-5 py-3 font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
               >
-                ↪ সাইন আউট
+                {signOut.isPending ? "সাইন আউট হচ্ছে..." : "↪ সাইন আউট"}
               </button>
+              {signOutError && (
+                <p role="alert" className="mt-3 text-sm text-red-700">
+                  {signOutError}
+                </p>
+              )}
             </div>
           </div>
         </section>

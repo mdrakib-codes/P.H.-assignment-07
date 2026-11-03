@@ -1,24 +1,57 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useSignInMutation } from "@/lib/auth/queries";
+
+function getSafeCallbackUrl(value: string | null): string {
+  if (!value) return "/";
+
+  try {
+    const url = new URL(value, window.location.origin);
+    return url.origin === window.location.origin
+      ? `${url.pathname}${url.search}`
+      : "/";
+  } catch {
+    return "/";
+  }
+}
 
 export default function SignInPage() {
+  const router = useRouter();
+  const signIn = useSignInMutation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setMessage("");
 
     if (!email.trim() || !password) {
       setMessage("ইমেইল ও পাসওয়ার্ড পূরণ করুন।");
       return;
     }
 
-    setMessage(
-      "ফর্মটি সঠিকভাবে পূরণ হয়েছে। প্রকৃত লগইনের জন্য authentication API সংযুক্ত করতে হবে।"
-    );
+    try {
+      await signIn.mutateAsync({
+        email: email.trim(),
+        password,
+      });
+
+      const callbackUrl = new URLSearchParams(window.location.search).get(
+        "callbackUrl",
+      );
+      router.replace(getSafeCallbackUrl(callbackUrl));
+      router.refresh();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "সাইন ইন করা যায়নি। আবার চেষ্টা করুন।",
+      );
+    }
   }
 
   return (
@@ -52,7 +85,7 @@ export default function SignInPage() {
             আপনার অ্যাকাউন্টে প্রবেশ করুন।
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+          <form onSubmit={onSubmit} className="mt-8 space-y-5">
             <div>
               <label
                 htmlFor="email"
@@ -95,15 +128,16 @@ export default function SignInPage() {
 
             <button
               type="submit"
-              className="w-full rounded-xl bg-green-700 px-5 py-3 font-semibold text-white transition hover:bg-green-800"
+              disabled={signIn.isPending}
+              className="w-full rounded-xl bg-green-700 px-5 py-3 font-semibold text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              সাইন ইন
+              {signIn.isPending ? "সাইন ইন হচ্ছে..." : "সাইন ইন"}
             </button>
 
             {message && (
               <p
                 aria-live="polite"
-                className="rounded-lg bg-green-50 p-3 text-sm text-green-800"
+                className="rounded-lg bg-red-50 p-3 text-sm text-red-700"
               >
                 {message}
               </p>
