@@ -1,10 +1,15 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
 
 const profileFeatures = [
   {
     title: "পণ্যের দাম",
     description: "বাজারের বিভিন্ন পণ্যের দাম দেখুন।",
-    href: "/categories",
+    href: "/#সব-পণ্য",
     icon: "🛒",
   },
   {
@@ -16,6 +21,44 @@ const profileFeatures = [
 ];
 
 export default function ProfilePage() {
+  const router = useRouter();
+
+  const { data: session, isPending } = authClient.useSession();
+
+  const user = session?.user;
+
+  useEffect(() => {
+    if (!isPending && !session) {
+      router.replace("/sign-in");
+    }
+  }, [isPending, session, router]);
+
+  const handleSignOut = async () => {
+    try {
+      const { error } = await authClient.signOut();
+
+      if (error) {
+        console.error("Sign Out Error:", error);
+        return;
+      }
+
+      router.replace("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Sign Out Error:", error);
+    }
+  };
+
+  if (isPending || !session) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#F8FAF5]">
+        <p className="font-semibold text-green-800">
+          প্রোফাইল লোড হচ্ছে...
+        </p>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[#F8FAF5] px-4 py-8 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-5xl">
@@ -30,7 +73,15 @@ export default function ProfilePage() {
           <div className="bg-green-800 px-6 py-10 text-white sm:px-10">
             <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
               <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/15 text-4xl">
-                👤
+                {user?.image ? (
+                  <img
+                    src={user.image}
+                    alt={user.name || "Profile"}
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                ) : (
+                  "👤"
+                )}
               </div>
 
               <div>
@@ -39,11 +90,11 @@ export default function ProfilePage() {
                 </p>
 
                 <h1 className="mt-2 text-3xl font-bold">
-                  আমার প্রোফাইল
+                  {user?.name || "ব্যবহারকারী"}
                 </h1>
 
                 <p className="mt-2 text-green-100">
-                  আপনার অ্যাকাউন্টের তথ্য দেখুন।
+                  আপনার ব্যক্তিগত প্রোফাইল।
                 </p>
               </div>
             </div>
@@ -54,15 +105,47 @@ export default function ProfilePage() {
               অ্যাকাউন্টের তথ্য
             </h2>
 
-            <div className="mt-5 rounded-2xl border border-gray-100 bg-[#F8FAF5] p-5">
-              <p className="font-semibold text-[#1D2B1F]">
-                ব্যবহারকারীর তথ্য
-              </p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-gray-100 bg-[#F8FAF5] p-5">
+                <p className="text-sm text-gray-500">
+                  সম্পূর্ণ নাম
+                </p>
 
-              <p className="mt-2 text-sm leading-6 text-gray-600">
-                প্রকৃত নাম, ইমেইল ও অ্যাকাউন্টের তথ্য দেখাতে authentication
-                ব্যবস্থা সংযুক্ত করতে হবে।
-              </p>
+                <p className="mt-2 break-words font-bold text-[#1D2B1F]">
+                  {user?.name || "নাম পাওয়া যায়নি"}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-gray-100 bg-[#F8FAF5] p-5">
+                <p className="text-sm text-gray-500">
+                  ইমেইল ঠিকানা
+                </p>
+
+                <p className="mt-2 break-all font-bold text-[#1D2B1F]">
+                  {user?.email || "ইমেইল পাওয়া যায়নি"}
+                </p>
+              </div>
+
+              
+
+              <div className="rounded-2xl border border-gray-100 bg-[#F8FAF5] p-5">
+                <p className="text-sm text-gray-500">
+                  অ্যাকাউন্ট তৈরি
+                </p>
+
+                <p className="mt-2 font-bold text-[#1D2B1F]">
+                  {user?.createdAt
+                    ? new Date(user.createdAt).toLocaleDateString(
+                        "bn-BD",
+                        {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        }
+                      )
+                    : "তথ্য পাওয়া যায়নি"}
+                </p>
+              </div>
             </div>
 
             <h2 className="mt-9 text-xl font-bold text-[#1D2B1F]">
@@ -95,13 +178,14 @@ export default function ProfilePage() {
               ))}
             </div>
 
-            <div className="mt-8">
-              <Link
-                href="/sign-in"
-                className="inline-flex rounded-xl border border-green-700 px-5 py-3 font-semibold text-green-800 transition hover:bg-green-50"
+            <div className="mt-8 border-t border-gray-100 pt-6">
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="inline-flex rounded-xl bg-red-600 px-5 py-3 font-semibold text-white transition hover:bg-red-700"
               >
-                সাইন ইন পেজ
-              </Link>
+                ↪ সাইন আউট
+              </button>
             </div>
           </div>
         </section>

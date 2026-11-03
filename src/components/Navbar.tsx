@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import PriceTicker from "@/components/PriceTicker";
+import { authClient } from "@/lib/auth-client";
 
 const categories = [
   { name: "সব পণ্য", icon: "🛒", href: "/#সব-পণ্য" },
@@ -19,8 +20,16 @@ const categories = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const { data: session, isPending } = authClient.useSession();
+
   const [date, setDate] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const user = session?.user;
 
   useEffect(() => {
     setDate(
@@ -34,7 +43,100 @@ export default function Navbar() {
 
   useEffect(() => {
     setMenuOpen(false);
+    setProfileOpen(false);
   }, [pathname]);
+
+  const handleSignOut = async () => {
+    try {
+      setSigningOut(true);
+
+      const { error } = await authClient.signOut();
+
+      if (error) {
+        console.error("Sign Out Error:", error);
+        return;
+      }
+
+      setProfileOpen(false);
+      setMenuOpen(false);
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Sign Out Error:", error);
+    } finally {
+      setSigningOut(false);
+    }
+  };
+
+  const authButtons = (
+    <>
+      <Link
+        href="/sign-in"
+        className="rounded-lg border border-emerald-700 px-4 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-50"
+      >
+        সাইন ইন
+      </Link>
+
+      <Link
+        href="/sign-up"
+        className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-900"
+      >
+        সাইন আপ
+      </Link>
+    </>
+  );
+
+  const profileMenu = (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setProfileOpen((previous) => !previous)}
+        aria-expanded={profileOpen}
+        className="flex items-center gap-2 rounded-lg border border-emerald-100 px-3 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-50"
+      >
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-lg">
+          👤
+        </span>
+
+        <span className="max-w-28 truncate">
+          {user?.name || "প্রোফাইল"}
+        </span>
+
+        <span className="text-xs">▼</span>
+      </button>
+
+      {profileOpen && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-gray-100 bg-white p-3 shadow-lg">
+          <div className="border-b border-gray-100 px-3 py-3">
+            <p className="truncate font-bold text-gray-800">
+              {user?.name || "User"}
+            </p>
+
+            <p className="mt-1 truncate text-xs text-gray-500">
+              {user?.email}
+            </p>
+          </div>
+
+          <Link
+            href="/profile"
+            onClick={() => setProfileOpen(false)}
+            className="mt-2 block rounded-lg px-3 py-3 text-sm font-semibold text-gray-700 transition hover:bg-emerald-50 hover:text-emerald-800"
+          >
+            👤 আমার প্রোফাইল
+          </Link>
+
+          <button
+            type="button"
+            onClick={handleSignOut}
+            disabled={signingOut}
+            className="mt-1 w-full rounded-lg px-3 py-3 text-left text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+          >
+            {signingOut ? "সাইন আউট হচ্ছে..." : "↪ সাইন আউট"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-100 bg-white shadow-sm">
@@ -50,19 +152,8 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden items-center gap-3 sm:flex">
-          <Link
-            href="/sign-in"
-            className="rounded-lg border border-emerald-700 px-4 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-50"
-          >
-            সাইন ইন
-          </Link>
-
-          <Link
-            href="/sign-up"
-            className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-900"
-          >
-            সাইন আপ
-          </Link>
+          {!isPending &&
+            (user ? profileMenu : authButtons)}
         </div>
 
         <button
@@ -80,6 +171,7 @@ export default function Navbar() {
         <div className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-4 py-2 sm:px-6 lg:px-8">
           {categories.map((category) => {
             const categoryPath = category.href.split("?")[0];
+
             const isActive =
               category.href === "/#সব-পণ্য"
                 ? false
@@ -110,6 +202,7 @@ export default function Navbar() {
               <Link
                 key={category.href}
                 href={category.href}
+                onClick={() => setMenuOpen(false)}
                 className="rounded-lg bg-gray-50 px-3 py-3 text-sm font-semibold text-gray-700 hover:bg-emerald-50"
               >
                 {category.icon} {category.name}
@@ -117,20 +210,41 @@ export default function Navbar() {
             ))}
           </nav>
 
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <Link
-              href="/sign-in"
-              className="rounded-lg border border-emerald-700 px-3 py-3 text-center text-sm font-bold text-emerald-800"
-            >
-              সাইন ইন
-            </Link>
+          <div className="mt-4">
+            {!isPending &&
+              (user ? (
+                <div className="space-y-2">
+                  <div className="rounded-lg bg-emerald-50 p-3">
+                    <p className="font-bold text-emerald-900">
+                      {user.name || "User"}
+                    </p>
+                    <p className="mt-1 break-all text-xs text-gray-600">
+                      {user.email}
+                    </p>
+                  </div>
 
-            <Link
-              href="/sign-up"
-              className="rounded-lg bg-emerald-800 px-3 py-3 text-center text-sm font-bold text-white"
-            >
-              সাইন আপ
-            </Link>
+                  <Link
+                    href="/profile"
+                    onClick={() => setMenuOpen(false)}
+                    className="block rounded-lg border border-emerald-700 px-3 py-3 text-center text-sm font-bold text-emerald-800"
+                  >
+                    👤 আমার প্রোফাইল
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    disabled={signingOut}
+                    className="w-full rounded-lg bg-red-50 px-3 py-3 text-sm font-bold text-red-600 disabled:opacity-50"
+                  >
+                    {signingOut ? "সাইন আউট হচ্ছে..." : "সাইন আউট"}
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {authButtons}
+                </div>
+              ))}
           </div>
         </div>
       )}
