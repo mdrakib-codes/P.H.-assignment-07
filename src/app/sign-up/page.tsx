@@ -2,217 +2,187 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
-import { authClient } from "@/lib/auth-client";
+import { useState, type FormEvent } from "react";
+import { useSignUpMutation } from "@/lib/auth/queries";
 
 export default function SignUpPage() {
-const router = useRouter();
+  const router = useRouter();
+  const signUp = useSignUpMutation();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [message, setMessage] = useState("");
 
-const [name, setName] = useState("");
-const [email, setEmail] = useState("");
-const [password, setPassword] = useState("");
-const [confirmPassword, setConfirmPassword] = useState("");
-const [message, setMessage] = useState("");
-const [isLoading, setIsLoading] = useState(false);
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
 
-async function onSubmit(event: FormEvent<HTMLFormElement>) {
-event.preventDefault();
-setMessage("");
+    if (!name.trim() || !email.trim() || !password || !confirmPassword) {
+      setMessage("সবগুলো ঘর পূরণ করুন।");
+      return;
+    }
 
+    if (password.length < 8) {
+      setMessage("পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।");
+      return;
+    }
 
-if (
-  !name.trim() ||
-  !email.trim() ||
-  !password ||
-  !confirmPassword
-) {
-  setMessage("সবগুলো ঘর পূরণ করুন।");
-  return;
-}
+    if (password !== confirmPassword) {
+      setMessage("দুটি পাসওয়ার্ড মিলছে না।");
+      return;
+    }
 
-if (password.length < 8) {
-  setMessage("পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।");
-  return;
-}
+    try {
+      await signUp.mutateAsync({
+        name: name.trim(),
+        email: email.trim(),
+        password,
+        callbackURL: "/",
+      });
 
-if (password !== confirmPassword) {
-  setMessage("দুটি পাসওয়ার্ড মিলছে না।");
-  return;
-}
-
-setIsLoading(true);
-
-try {
-  const { data, error } = await authClient.signUp.email({
-    name: name.trim(),
-    email: email.trim(),
-    password,
-    callbackURL: "/",
-  });
-
-if (error) {
-  console.error("Better Auth Sign Up Error:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-  console.error("Error status:", error.status);
-  console.error("Error statusText:", error.statusText);
-  console.error("Error message:", error.message);
-
-  setMessage(
-    error.message || "অ্যাকাউন্ট তৈরি করা যায়নি। আবার চেষ্টা করুন।"
-  );
-  return;
-}
-
-
-
-  if (data) {
-    router.push("/");
-    router.refresh();
+      router.replace("/");
+      router.refresh();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "অ্যাকাউন্ট তৈরি করা যায়নি। আবার চেষ্টা করুন।",
+      );
+    }
   }
-} catch {
-  setMessage("সমস্যা হয়েছে। আবার চেষ্টা করুন।");
-} finally {
-  setIsLoading(false);
-}
 
-
-}
-
-return ( <main className="flex min-h-screen items-center justify-center bg-[#F8FAF5] px-4 py-10"> <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-lg sm:p-10"> <Link
-       href="/"
-       className="text-sm font-medium text-green-700 hover:underline"
-     >
-← হোম পেজ </Link>
-
-
-    <div className="mt-7 text-center">
-      <div className="text-5xl">🛒</div>
-
-      <h1 className="mt-4 text-3xl font-bold text-[#1D2B1F]">
-        নতুন অ্যাকাউন্ট তৈরি করুন
-      </h1>
-
-      <p className="mt-3 text-gray-600">
-        বাজার দর-এর সঙ্গে যুক্ত হোন।
-      </p>
-    </div>
-
-    <form onSubmit={onSubmit} className="mt-8 space-y-5">
-      <div>
-        <label
-          htmlFor="name"
-          className="mb-2 block text-sm font-medium text-gray-700"
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#F8FAF5] px-4 py-10">
+      <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-lg sm:p-10">
+        <Link
+          href="/"
+          className="text-sm font-medium text-green-700 hover:underline"
         >
-          আপনার নাম
-        </label>
+          ← হোম পেজ
+        </Link>
 
-        <input
-          id="name"
-          name="name"
-          type="text"
-          autoComplete="name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="সম্পূর্ণ নাম লিখুন"
-          required
-          className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
-        />
-      </div>
+        <div className="mt-7 text-center">
+          <div className="text-5xl">🛒</div>
+          <h1 className="mt-4 text-3xl font-bold text-[#1D2B1F]">
+            নতুন অ্যাকাউন্ট তৈরি করুন
+          </h1>
+          <p className="mt-3 text-gray-600">বাজার দর-এর সঙ্গে যুক্ত হোন।</p>
+        </div>
 
-      <div>
-        <label
-          htmlFor="email"
-          className="mb-2 block text-sm font-medium text-gray-700"
-        >
-          ইমেইল
-        </label>
+        <form onSubmit={onSubmit} className="mt-8 space-y-5">
+          <div>
+            <label
+              htmlFor="name"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
+              আপনার নাম
+            </label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              autoComplete="name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="সম্পূর্ণ নাম লিখুন"
+              required
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
+            />
+          </div>
 
-        <input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="আপনার ইমেইল লিখুন"
-          required
-          className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
-        />
-      </div>
+          <div>
+            <label
+              htmlFor="email"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
+              ইমেইল
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="আপনার ইমেইল লিখুন"
+              required
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
+            />
+          </div>
 
-      <div>
-        <label
-          htmlFor="password"
-          className="mb-2 block text-sm font-medium text-gray-700"
-        >
-          পাসওয়ার্ড
-        </label>
+          <div>
+            <label
+              htmlFor="password"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
+              পাসওয়ার্ড
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="কমপক্ষে ৮ অক্ষর"
+              required
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
+            />
+          </div>
 
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          minLength={8}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="কমপক্ষে ৮ অক্ষর"
-          required
-          className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
-        />
-      </div>
+          <div>
+            <label
+              htmlFor="confirmPassword"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
+              পাসওয়ার্ড নিশ্চিত করুন
+            </label>
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              placeholder="পাসওয়ার্ড আবার লিখুন"
+              required
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
+            />
+          </div>
 
-      <div>
-        <label
-          htmlFor="confirmPassword"
-          className="mb-2 block text-sm font-medium text-gray-700"
-        >
-          পাসওয়ার্ড নিশ্চিত করুন
-        </label>
+          <button
+            type="submit"
+            disabled={signUp.isPending}
+            className="w-full rounded-xl bg-green-700 px-5 py-3 font-semibold text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {signUp.isPending
+              ? "অ্যাকাউন্ট তৈরি হচ্ছে..."
+              : "অ্যাকাউন্ট তৈরি করুন"}
+          </button>
 
-        <input
-          id="confirmPassword"
-          name="confirmPassword"
-          type="password"
-          autoComplete="new-password"
-          minLength={8}
-          value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
-          placeholder="পাসওয়ার্ড আবার লিখুন"
-          required
-          className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
-        />
-      </div>
+          {message && (
+            <p
+              role="alert"
+              className="rounded-lg bg-red-50 p-3 text-sm text-red-700"
+            >
+              {message}
+            </p>
+          )}
+        </form>
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full rounded-xl bg-green-700 px-5 py-3 font-semibold text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isLoading ? "অ্যাকাউন্ট তৈরি হচ্ছে..." : "অ্যাকাউন্ট তৈরি করুন"}
-      </button>
-
-      {message && (
-        <p
-          aria-live="polite"
-          className="rounded-lg bg-green-50 p-3 text-sm text-green-800"
-        >
-          {message}
+        <p className="mt-6 text-center text-sm text-gray-600">
+          আগে থেকেই অ্যাকাউন্ট আছে?{" "}
+          <Link
+            href="/sign-in"
+            className="font-semibold text-green-700 hover:underline"
+          >
+            সাইন ইন করুন
+          </Link>
         </p>
-      )}
-    </form>
-
-    <p className="mt-6 text-center text-sm text-gray-600">
-      আগে থেকেই অ্যাকাউন্ট আছে?{" "}
-      <Link
-        href="/sign-in"
-        className="font-semibold text-green-700 hover:underline"
-      >
-        সাইন ইন করুন
-      </Link>
-    </p>
-  </div>
-</main>
-
-
-);
+      </div>
+    </main>
+  );
 }
