@@ -1,22 +1,19 @@
-import Link from "next/link";
-import Navbar from "@/components/Navbar";
-import ProductSection from "@/components/ProductSection";
+"use client";
 
-const categories = [
-  { name: "চাল", icon: "🍚", href: "/category/chal" },
-  { name: "ডাল", icon: "🫘", href: "/category/dal" },
-  { name: "তেল", icon: "🫙", href: "/category/tel" },
-  { name: "সবজি", icon: "🥬", href: "/category/sobji" },
-  { name: "মাছ", icon: "🐟", href: "/category/mach" },
-  { name: "মাংস", icon: "🍗", href: "/category/mangsho" },
-  { name: "ডিম-দুধ", icon: "🥚", href: "/category/dim-dui" },
-  { name: "মসলা", icon: "🌶️", href: "/category/mosla" },
-];
+import Link from "next/link";
+import Navbar from "@/components/navigation/Navbar";
+import ProductSection from "@/features/products/components/ProductSection";
+import { useCategories, useProducts } from "@/lib/api/queries";
 
 export default function Home() {
+  const categoriesQuery = useCategories();
+  const productsQuery = useProducts();
+  const categories = categoriesQuery.data ?? [];
+  const products = productsQuery.data ?? [];
+
   return (
     <main className="min-h-screen bg-[#F8FAF5] text-[#1D2B1F]">
-      <Navbar />
+      <Navbar products={products} />
 
       <section className="overflow-hidden bg-gradient-to-br from-[#E9F5E8] via-[#F8FAF5] to-[#DCEED9]">
         <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-12 sm:px-6 sm:py-16 md:grid-cols-2 lg:px-8 lg:py-20">
@@ -40,14 +37,14 @@ export default function Home() {
 
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                href="#সব-পণ্য"
+                href="/products"
                 className="rounded-xl bg-emerald-800 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-900"
               >
                 বাজারদর দেখুন →
               </Link>
 
               <Link
-                href="#categories"
+                href="/categories"
                 className="rounded-xl border border-emerald-200 bg-white px-6 py-3.5 text-sm font-bold text-emerald-800 transition hover:bg-emerald-50"
               >
                 ক্যাটাগরি দেখুন
@@ -85,13 +82,15 @@ export default function Home() {
               <div className="grid grid-cols-3 gap-3">
                 {categories.slice(0, 3).map((category) => (
                   <Link
-                    key={category.href}
-                    href={category.href}
+                    key={category.id}
+                    href={`/categories/${encodeURIComponent(category.slug)}`}
                     className="rounded-xl bg-[#F5F8F2] px-2 py-3 text-center transition hover:bg-emerald-50"
                   >
-                    <span className="text-2xl">{category.icon}</span>
+                    {category.icon && (
+                      <span className="text-2xl">{category.icon}</span>
+                    )}
                     <p className="mt-2 text-sm font-bold">
-                      {category.name}
+                      {category.nameBn}
                     </p>
                   </Link>
                 ))}
@@ -102,7 +101,6 @@ export default function Home() {
       </section>
 
       <section
-        id="categories"
         className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8"
       >
         <div className="mb-7">
@@ -120,18 +118,39 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
-          {categories.map((category) => (
+          {categoriesQuery.isLoading ? (
+            <p className="col-span-full text-sm text-gray-500">
+              ক্যাটাগরি লোড হচ্ছে...
+            </p>
+          ) : categoriesQuery.isError ? (
+            <p role="alert" className="col-span-full text-sm text-red-700">
+              ক্যাটাগরি লোড করা যায়নি।
+              <button
+                type="button"
+                onClick={() => void categoriesQuery.refetch()}
+                className="ml-2 font-bold underline"
+              >
+                আবার চেষ্টা করুন
+              </button>
+            </p>
+          ) : categories.length === 0 ? (
+            <p className="col-span-full text-sm text-gray-500">
+              কোনো ক্যাটাগরি পাওয়া যায়নি।
+            </p>
+          ) : categories.map((category) => (
             <Link
-              key={category.href}
-              href={category.href}
+              key={category.id}
+              href={`/categories/${encodeURIComponent(category.slug)}`}
               className="group flex flex-col items-center rounded-2xl border border-gray-100 bg-white px-3 py-5 shadow-sm transition hover:-translate-y-1 hover:border-emerald-200 hover:shadow-md"
             >
-              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F0F7EC] text-3xl">
-                {category.icon}
-              </span>
+              {category.icon && (
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F0F7EC] text-3xl">
+                  {category.icon}
+                </span>
+              )}
 
               <span className="mt-3 text-sm font-bold">
-                {category.name}
+                {category.nameBn}
               </span>
 
               <span className="mt-1 text-xs text-gray-400">
@@ -142,7 +161,16 @@ export default function Home() {
         </div>
       </section>
 
-      <ProductSection />
+      <ProductSection
+        products={products}
+        isLoading={productsQuery.isLoading}
+        error={
+          productsQuery.isError
+            ? "পণ্যের তথ্য লোড করা যায়নি।"
+            : undefined
+        }
+        onRetry={() => void productsQuery.refetch()}
+      />
 
       <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
         <div className="rounded-3xl bg-emerald-800 px-6 py-10 text-center text-white sm:px-12 sm:py-14">
@@ -158,7 +186,7 @@ export default function Home() {
           </p>
 
           <Link
-            href="#সব-পণ্য"
+            href="/products"
             className="mt-6 inline-block rounded-xl bg-emerald-600 px-6 py-3 font-bold text-emerald-800 transition hover:bg-emerald-500"
           >
             পণ্যের তালিকা দেখুন

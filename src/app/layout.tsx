@@ -1,7 +1,5 @@
-import { setServers } from "node:dns/promises";
-
-setServers(["1.1.1.1", "8.8.8.8"])
 import type { Metadata } from "next";
+import QueryProvider from "@/components/providers/QueryProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,8 +14,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="bn">
-      <body>{children}</body>
+    <html lang="bn" data-scroll-behavior="smooth">
+      <body>
+        <QueryProvider>{children}</QueryProvider>
+      </body>
     </html>
   );
 }
