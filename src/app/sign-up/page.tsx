@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { useSignUpMutation } from "@/lib/auth/queries";
+import { authClient } from "@/lib/auth-client";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function SignUpPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [googlePending, setGooglePending] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,6 +51,29 @@ export default function SignUpPage() {
           ? error.message
           : "অ্যাকাউন্ট তৈরি করা যায়নি। আবার চেষ্টা করুন।",
       );
+    }
+  }
+
+  async function onGoogleSignUp() {
+    setMessage("");
+    setGooglePending(true);
+
+    try {
+      const { error } = await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/",
+      });
+
+      if (error) {
+        throw new Error(error.message || "Google দিয়ে অ্যাকাউন্ট তৈরি করা যায়নি।");
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Google দিয়ে অ্যাকাউন্ট তৈরি করা যায়নি। আবার চেষ্টা করুন।",
+      );
+      setGooglePending(false);
     }
   }
 
@@ -172,6 +197,25 @@ export default function SignUpPage() {
             </p>
           )}
         </form>
+
+        <div className="mt-6">
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-gray-200" />
+            <span className="text-sm text-gray-500">অথবা</span>
+            <span className="h-px flex-1 bg-gray-200" />
+          </div>
+          <button
+            type="button"
+            onClick={onGoogleSignUp}
+            disabled={googlePending}
+            className="mt-4 flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white px-5 py-3 font-semibold text-[#1D2B1F] transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span aria-hidden="true" className="text-lg font-bold text-[#4285F4]">
+              G
+            </span>
+            {googlePending ? "Google-এ সংযোগ হচ্ছে..." : "Continue with Google"}
+          </button>
+        </div>
 
         <p className="mt-6 text-center text-sm text-gray-600">
           আগে থেকেই অ্যাকাউন্ট আছে?{" "}

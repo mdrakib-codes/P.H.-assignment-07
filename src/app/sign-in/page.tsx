@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useSignInMutation } from "@/lib/auth/queries";
+import { authClient } from "@/lib/auth-client";
 
 function getSafeCallbackUrl(value: string | null): string {
   if (!value) return "/";
@@ -24,6 +25,7 @@ export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [googlePending, setGooglePending] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -51,6 +53,32 @@ export default function SignInPage() {
           ? error.message
           : "সাইন ইন করা যায়নি। আবার চেষ্টা করুন।",
       );
+    }
+  }
+
+  async function onGoogleSignIn() {
+    setMessage("");
+    setGooglePending(true);
+
+    try {
+      const callbackUrl = new URLSearchParams(window.location.search).get(
+        "callbackUrl",
+      );
+      const { error } = await authClient.signIn.social({
+        provider: "google",
+        callbackURL: getSafeCallbackUrl(callbackUrl),
+      });
+
+      if (error) {
+        throw new Error(error.message || "Google দিয়ে সাইন ইন করা যায়নি।");
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Google দিয়ে সাইন ইন করা যায়নি। আবার চেষ্টা করুন।",
+      );
+      setGooglePending(false);
     }
   }
 
@@ -143,6 +171,25 @@ export default function SignInPage() {
               </p>
             )}
           </form>
+
+          <div className="mt-6">
+            <div className="flex items-center gap-3">
+              <span className="h-px flex-1 bg-gray-200" />
+              <span className="text-sm text-gray-500">অথবা</span>
+              <span className="h-px flex-1 bg-gray-200" />
+            </div>
+            <button
+              type="button"
+              onClick={onGoogleSignIn}
+              disabled={googlePending}
+              className="mt-4 flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white px-5 py-3 font-semibold text-[#1D2B1F] transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <span aria-hidden="true" className="text-lg font-bold text-[#4285F4]">
+                G
+              </span>
+              {googlePending ? "Google-এ সংযোগ হচ্ছে..." : "Continue with Google"}
+            </button>
+          </div>
 
           <p className="mt-6 text-center text-sm text-gray-600">
             অ্যাকাউন্ট নেই?{" "}
