@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Product } from "@/lib/api";
 import PriceTicker from "@/features/products/components/PriceTicker";
 import { useAuthSession, useSignOutMutation } from "@/lib/auth/queries";
@@ -20,7 +20,20 @@ export default function Navbar({ products = [] }: { products?: Product[] }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [signOutError, setSignOutError] = useState("");
+  const [currentDate, setCurrentDate] = useState("");
   const user = session?.user;
+
+  useEffect(() => {
+    const formatter = new Intl.DateTimeFormat("bn-BD", {
+      dateStyle: "long",
+      timeZone: "Asia/Dhaka",
+    });
+    const updateDate = () => setCurrentDate(formatter.format(new Date()));
+
+    updateDate();
+    const intervalId = window.setInterval(updateDate, 60_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   async function handleSignOut() {
     setSignOutError("");
@@ -98,6 +111,9 @@ export default function Navbar({ products = [] }: { products?: Product[] }) {
         <Link href="/" className="shrink-0">
           <span className="block text-xl font-extrabold text-emerald-800 sm:text-2xl">
             🛒 বাজার দর
+          </span>
+          <span className="mt-1 block min-h-4 text-xs text-gray-500">
+            {currentDate}
           </span>
           <span className="mt-1 block text-xs text-gray-500">
             বাংলাদেশের বাজারদর
